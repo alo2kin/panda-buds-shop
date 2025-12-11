@@ -10,15 +10,16 @@ import { SHIPPING_COST } from "@/data/products";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const orderSchema = z.object({
-  firstName: z.string().min(2, "Ime mora imati najmanje 2 karaktera"),
-  lastName: z.string().min(2, "Prezime mora imati najmanje 2 karaktera"),
-  phone: z.string().min(9, "Unesite validan broj telefona"),
-  municipality: z.string().min(2, "Unesite opštinu"),
-  city: z.string().min(2, "Unesite grad"),
-  address: z.string().min(5, "Unesite punu adresu"),
-  email: z.string().email("Unesite validnu email adresu"),
+  firstName: z.string().min(2, "Ime mora imati najmanje 2 karaktera").max(50),
+  lastName: z.string().min(2, "Prezime mora imati najmanje 2 karaktera").max(50),
+  phone: z.string().min(9, "Unesite validan broj telefona").max(20),
+  municipality: z.string().min(2, "Unesite opštinu").max(100),
+  city: z.string().min(2, "Unesite grad").max(100),
+  address: z.string().min(5, "Unesite punu adresu").max(200),
+  email: z.string().email("Unesite validnu email adresu").max(100),
 });
 
 type OrderFormData = z.infer<typeof orderSchema>;
@@ -40,40 +41,58 @@ export const CheckoutForm = () => {
   const onSubmit = async (data: OrderFormData) => {
     setIsSubmitting(true);
 
-    // Simulate order submission - replace with actual backend call
-    const orderData = {
-      customer: data,
-      items: items.map((item) => ({
-        productId: item.product.id,
-        name: item.product.name,
-        color: item.product.color,
-        quantity: item.quantity,
-        price: item.product.price,
-      })),
-      subtotal: totalPrice,
-      shipping: SHIPPING_COST,
-      total: totalPrice + SHIPPING_COST,
-      paymentMethod: "Plaćanje pouzećem",
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const orderData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        email: data.email,
+        municipality: data.municipality,
+        city: data.city,
+        address: data.address,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          name: item.product.name,
+          color: item.product.color,
+          quantity: item.quantity,
+          price: item.product.price,
+        })),
+        subtotal: totalPrice,
+        shipping: SHIPPING_COST,
+        total: totalPrice + SHIPPING_COST,
+      };
 
-    console.log("Order submitted:", orderData);
+      const { data: result, error } = await supabase.functions.invoke("create-order", {
+        body: orderData,
+      });
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (error) {
+        console.error("Order error:", error);
+        throw new Error(error.message || "Greška pri slanju porudžbine");
+      }
 
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    
-    toast.success("Porudžbina uspešno poslata!", {
-      description: "Uskoro ćete dobiti potvrdu na email.",
-    });
+      if (!result.success) {
+        throw new Error(result.error || "Greška pri slanju porudžbine");
+      }
 
-    // Clear cart after successful order
-    setTimeout(() => {
-      clearCart();
-      navigate("/order-success");
-    }, 2000);
+      console.log("Order created successfully:", result);
+      
+      setIsSuccess(true);
+      toast.success("Porudžbina uspešno poslata!", {
+        description: "Potvrda je poslata na vašu email adresu.",
+      });
+
+      setTimeout(() => {
+        clearCart();
+        navigate("/order-success");
+      }, 2000);
+    } catch (error: any) {
+      console.error("Order submission error:", error);
+      toast.error("Greška pri slanju porudžbine", {
+        description: error.message || "Molimo pokušajte ponovo.",
+      });
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
