@@ -398,21 +398,34 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
+      if (isSignup) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/admin`,
+          },
+        });
+        if (error) throw error;
+        toast.success("Registracija uspešna! Sada se možete prijaviti.");
+        setIsSignup(false);
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
     } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error("Greška pri prijavi", {
+      console.error("Auth error:", error);
+      toast.error(isSignup ? "Greška pri registraciji" : "Greška pri prijavi", {
         description: error.message || "Proverite email i lozinku",
       });
     } finally {
@@ -430,11 +443,11 @@ const AdminLogin = () => {
               <Package className="h-12 w-12 text-bamboo-dark mx-auto mb-4" />
               <h1 className="text-2xl font-bold">Admin Panel</h1>
               <p className="text-muted-foreground mt-2">
-                Prijavite se za pristup porudžbinama
+                {isSignup ? "Kreirajte admin nalog" : "Prijavite se za pristup porudžbinama"}
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -455,6 +468,7 @@ const AdminLogin = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  minLength={6}
                   required
                 />
               </div>
@@ -468,13 +482,23 @@ const AdminLogin = () => {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Prijavljivanje...
+                    {isSignup ? "Registracija..." : "Prijavljivanje..."}
                   </>
                 ) : (
-                  "Prijavi se"
+                  isSignup ? "Registruj se" : "Prijavi se"
                 )}
               </Button>
             </form>
+
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignup(!isSignup)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isSignup ? "Već imate nalog? Prijavite se" : "Nemate nalog? Registrujte se"}
+              </button>
+            </div>
           </div>
         </div>
       </main>
