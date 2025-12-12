@@ -24,6 +24,7 @@ interface OrderRequest {
   municipality: string;
   city: string;
   address: string;
+  courierService: string;
   items: OrderItem[];
   subtotal: number;
   shipping: number;
@@ -56,6 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
         municipality: orderData.municipality,
         city: orderData.city,
         address: orderData.address,
+        courier_service: orderData.courierService,
         items: orderData.items,
         subtotal: orderData.subtotal,
         shipping: orderData.shipping,
@@ -154,6 +156,9 @@ const handler = async (req: Request): Promise<Response> => {
                 ${orderData.municipality}, ${orderData.city}<br>
                 Tel: ${orderData.phone}
               </p>
+              <p style="margin-top: 12px; font-weight: bold;">
+                🚚 Kurirska služba: ${orderData.courierService}
+              </p>
             </div>
 
             <div style="background: #fef3c7; border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center;">
@@ -207,7 +212,8 @@ const handler = async (req: Request): Promise<Response> => {
                 <strong>Ime:</strong> ${orderData.firstName} ${orderData.lastName}<br>
                 <strong>Email:</strong> ${orderData.email}<br>
                 <strong>Telefon:</strong> ${orderData.phone}<br>
-                <strong>Adresa:</strong> ${orderData.address}, ${orderData.municipality}, ${orderData.city}
+                <strong>Adresa:</strong> ${orderData.address}, ${orderData.municipality}, ${orderData.city}<br>
+                <strong>🚚 Kurir:</strong> ${orderData.courierService}
               </p>
             </div>
 
