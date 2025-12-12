@@ -5,12 +5,20 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCart } from "@/context/CartContext";
 import { SHIPPING_COST } from "@/data/products";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+const COURIER_SERVICES = [
+  { id: "Dexpress", name: "D Express" },
+  { id: "BexExpress", name: "Bex Express" },
+  { id: "AksExpress", name: "Aks Express" },
+  { id: "PostExpress", name: "Post Express" },
+] as const;
 
 const orderSchema = z.object({
   firstName: z.string().min(2, "Ime mora imati najmanje 2 karaktera").max(50),
@@ -20,6 +28,7 @@ const orderSchema = z.object({
   city: z.string().min(2, "Unesite grad").max(100),
   address: z.string().min(5, "Unesite punu adresu").max(200),
   email: z.string().email("Unesite validnu email adresu").max(100),
+  courierService: z.string().min(1, "Izaberite kurirsku službu"),
 });
 
 type OrderFormData = z.infer<typeof orderSchema>;
@@ -33,10 +42,17 @@ export const CheckoutForm = () => {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
+    defaultValues: {
+      courierService: "Dexpress",
+    },
   });
+
+  const selectedCourier = watch("courierService");
 
   const onSubmit = async (data: OrderFormData) => {
     setIsSubmitting(true);
@@ -50,6 +66,7 @@ export const CheckoutForm = () => {
         municipality: data.municipality,
         city: data.city,
         address: data.address,
+        courierService: data.courierService,
         items: items.map((item) => ({
           productId: item.product.id,
           name: item.product.name,
@@ -203,6 +220,38 @@ export const CheckoutForm = () => {
         />
         {errors.address && (
           <p className="text-sm text-destructive">{errors.address.message}</p>
+        )}
+      </div>
+
+      {/* Courier Service Selection */}
+      <div className="space-y-3">
+        <Label className="flex items-center gap-2">
+          <Truck className="h-4 w-4" />
+          Izaberite kurirsku službu *
+        </Label>
+        <RadioGroup
+          value={selectedCourier}
+          onValueChange={(value) => setValue("courierService", value)}
+          className="grid grid-cols-2 gap-3"
+        >
+          {COURIER_SERVICES.map((courier) => (
+            <div key={courier.id}>
+              <RadioGroupItem
+                value={courier.id}
+                id={courier.id}
+                className="peer sr-only"
+              />
+              <Label
+                htmlFor={courier.id}
+                className="flex items-center justify-center rounded-xl border-2 border-border bg-background p-4 hover:bg-muted cursor-pointer peer-data-[state=checked]:border-bamboo-dark peer-data-[state=checked]:bg-bamboo-light transition-all"
+              >
+                <span className="font-medium">{courier.name}</span>
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+        {errors.courierService && (
+          <p className="text-sm text-destructive">{errors.courierService.message}</p>
         )}
       </div>
 
