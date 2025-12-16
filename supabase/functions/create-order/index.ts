@@ -322,80 +322,93 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Customer email sent:", customerEmailData);
 
     // Send notification email to store owner
-    const ownerEmail = Deno.env.get("OWNER_EMAIL") || orderData.email;
+    const ownerEmail = Deno.env.get("OWNER_EMAIL");
+    console.log("OWNER_EMAIL configured:", ownerEmail ? "Yes" : "No");
     
-    const ownerEmailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "Panda Buds <onboarding@resend.dev>",
-        to: [ownerEmail],
-        subject: `🐼 Nova porudžbina #${order.id.slice(0, 8).toUpperCase()} - ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-          </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #166534;">🐼 Nova porudžbina!</h1>
-            
-            <div style="background: #f0fdf4; border-radius: 16px; padding: 20px; margin: 20px 0;">
-              <h2 style="margin-top: 0;">Porudžbina #${order.id.slice(0, 8).toUpperCase()}</h2>
-              <p><strong>Datum:</strong> ${new Date().toISOString()}</p>
-            </div>
+    if (!ownerEmail) {
+      console.error("OWNER_EMAIL is not configured! Cannot send notification to owner.");
+    } else {
+      console.log("Attempting to send notification to owner:", ownerEmail);
+      
+      const ownerEmailResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: "Panda Buds <onboarding@resend.dev>",
+          to: [ownerEmail],
+          subject: `🐼 Nova porudžbina #${order.id.slice(0, 8).toUpperCase()} - ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #166534;">🐼 Nova porudžbina!</h1>
+              
+              <div style="background: #f0fdf4; border-radius: 16px; padding: 20px; margin: 20px 0;">
+                <h2 style="margin-top: 0;">Porudžbina #${order.id.slice(0, 8).toUpperCase()}</h2>
+                <p><strong>Datum:</strong> ${new Date().toISOString()}</p>
+              </div>
 
-            <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
-              <h3 style="margin-top: 0;">👤 Kupac</h3>
-              <p>
-                <strong>Ime:</strong> ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}<br>
-                <strong>Email:</strong> ${escapeHtml(orderData.email)}<br>
-                <strong>Telefon:</strong> ${escapeHtml(orderData.phone)}<br>
-                <strong>Adresa:</strong> ${escapeHtml(orderData.address)}, ${escapeHtml(orderData.municipality)}, ${escapeHtml(orderData.city)}<br>
-                <strong>🚚 Kurir:</strong> ${escapeHtml(orderData.courierService)}
+              <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">👤 Kupac</h3>
+                <p>
+                  <strong>Ime:</strong> ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}<br>
+                  <strong>Email:</strong> ${escapeHtml(orderData.email)}<br>
+                  <strong>Telefon:</strong> ${escapeHtml(orderData.phone)}<br>
+                  <strong>Adresa:</strong> ${escapeHtml(orderData.address)}, ${escapeHtml(orderData.municipality)}, ${escapeHtml(orderData.city)}<br>
+                  <strong>🚚 Kurir:</strong> ${escapeHtml(orderData.courierService)}
+                </p>
+              </div>
+
+              <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">📦 Proizvodi</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #e5e7eb;">
+                      <th style="padding: 12px; text-align: left;">Proizvod</th>
+                      <th style="padding: 12px; text-align: center;">Kom.</th>
+                      <th style="padding: 12px; text-align: right;">Cena</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itemsHtml}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="2" style="padding: 12px; text-align: right;">Poštarina:</td>
+                      <td style="padding: 12px; text-align: right;">${orderData.shipping} RSD</td>
+                    </tr>
+                    <tr style="font-weight: bold; font-size: 18px; background: #dcfce7;">
+                      <td colspan="2" style="padding: 12px; text-align: right;">UKUPNO:</td>
+                      <td style="padding: 12px; text-align: right;">${orderData.total} RSD</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px; text-align: center;">
+                Ovaj email je automatski generisan od strane Panda Buds sistema.
               </p>
-            </div>
+            </body>
+            </html>
+          `,
+        }),
+      });
 
-            <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
-              <h3 style="margin-top: 0;">📦 Proizvodi</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                  <tr style="background: #e5e7eb;">
-                    <th style="padding: 12px; text-align: left;">Proizvod</th>
-                    <th style="padding: 12px; text-align: center;">Kom.</th>
-                    <th style="padding: 12px; text-align: right;">Cena</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${itemsHtml}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="2" style="padding: 12px; text-align: right;">Poštarina:</td>
-                    <td style="padding: 12px; text-align: right;">${orderData.shipping} RSD</td>
-                  </tr>
-                  <tr style="font-weight: bold; font-size: 18px; background: #dcfce7;">
-                    <td colspan="2" style="padding: 12px; text-align: right;">UKUPNO:</td>
-                    <td style="padding: 12px; text-align: right;">${orderData.total} RSD</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            <p style="color: #6b7280; font-size: 14px; text-align: center;">
-              Ovaj email je automatski generisan od strane Panda Buds sistema.
-            </p>
-          </body>
-          </html>
-        `,
-      }),
-    });
-
-    const ownerEmailData = await ownerEmailResponse.json();
-    console.log("Owner notification email sent:", ownerEmailData);
+      const ownerEmailData = await ownerEmailResponse.json();
+      
+      if (!ownerEmailResponse.ok) {
+        console.error("Failed to send owner notification email:", ownerEmailData);
+        console.error("Resend API error - this is likely because you're using test mode (onboarding@resend.dev) and OWNER_EMAIL is not the verified Resend account email.");
+      } else {
+        console.log("Owner notification email sent successfully:", ownerEmailData);
+      }
+    }
 
     return new Response(
       JSON.stringify({
