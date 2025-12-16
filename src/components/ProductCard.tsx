@@ -32,15 +32,6 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        
-        {/* Color badge */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 bg-background/90 backdrop-blur-sm rounded-full px-3 py-1.5">
-          <span
-            className="w-4 h-4 rounded-full border border-border"
-            style={{ backgroundColor: product.colorHex }}
-          />
-          <span className="text-sm font-medium">{product.color}</span>
-        </div>
 
         {/* Thumbnail navigation */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">

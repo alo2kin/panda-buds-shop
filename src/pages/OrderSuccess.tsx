@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Package, Mail } from "lucide-react";
+import { CheckCircle2, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const OrderSuccess = () => {
@@ -20,23 +20,10 @@ const OrderSuccess = () => {
             </h1>
             
             <p className="text-lg text-muted-foreground mb-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-              Vaša porudžbina je uspešno primljena. Uskoro ćete dobiti
-              potvrdu na email adresu.
+              Vaša porudžbina je uspešno primljena i biće obrađena u najkraćem roku.
             </p>
 
-            <div className="bg-muted rounded-xl p-6 mb-8 space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <div className="flex items-center gap-4 text-left">
-                <div className="h-12 w-12 rounded-full bg-bamboo-light flex items-center justify-center flex-shrink-0">
-                  <Mail className="h-6 w-6 text-bamboo-dark" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Potvrda na email</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Proverite inbox za potvrdu porudžbine
-                  </p>
-                </div>
-              </div>
-
+            <div className="bg-muted rounded-xl p-6 mb-8 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="flex items-center gap-4 text-left">
                 <div className="h-12 w-12 rounded-full bg-bamboo-light flex items-center justify-center flex-shrink-0">
                   <Package className="h-6 w-6 text-bamboo-dark" />

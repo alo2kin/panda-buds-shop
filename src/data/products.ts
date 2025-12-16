@@ -18,6 +18,12 @@ import urban2 from "@/assets/products/urban-2.png";
 import urban3 from "@/assets/products/urban-3.png";
 import urban4 from "@/assets/products/urban-4.png";
 
+// Import monochrome product images
+import mono1 from "@/assets/products/mono-1.png";
+import mono2 from "@/assets/products/mono-2.png";
+import mono3 from "@/assets/products/mono-3.png";
+import mono4 from "@/assets/products/mono-4.png";
+
 // Placeholder images - replace with actual product images
 export const products: Product[] = [
   {
@@ -52,12 +58,7 @@ export const products: Product[] = [
     name: "Panda Buds Monochrome",
     description: "Bamboo zelene bežične slušalice inspirisane prirodom. Ekološki dizajn za ljubitelje prirode.",
     price: 2400,
-    images: [
-      "/placeholder.svg",
-      "/placeholder.svg",
-      "/placeholder.svg",
-      "/placeholder.svg",
-    ],
+    images: [mono1, mono2, mono3, mono4],
     color: "Zelena",
     colorHex: "#4ade80",
   },
