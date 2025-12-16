@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // --------------------------------------------------------
 // 👇👇👇 OVDE UPIŠI SVOJ EMAIL NA KOJI STIŽU PORUDŽBINE 👇👇👇
-const OWNER_EMAIL = "tvoj_pravi_email@gmail.com"; 
+const OWNER_EMAIL = "smidt.ivan123@gmail.com"; 
 // --------------------------------------------------------
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
