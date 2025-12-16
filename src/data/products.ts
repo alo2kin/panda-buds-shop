@@ -6,6 +6,12 @@ import white2 from "@/assets/products/white-2.png";
 import white3 from "@/assets/products/white-3.png";
 import white4 from "@/assets/products/white-4.png";
 
+// Import pink product images
+import pink1 from "@/assets/products/pink-1.png";
+import pink2 from "@/assets/products/pink-2.png";
+import pink3 from "@/assets/products/pink-3.png";
+import pink4 from "@/assets/products/pink-4.png";
+
 // Placeholder images - replace with actual product images
 export const products: Product[] = [
   {
@@ -36,12 +42,7 @@ export const products: Product[] = [
     name: "Panda Buds Blossom",
     description: "Roze bežične slušalice sa slatkim panda motivom. Idealne za one koji vole da se ističu.",
     price: 2400,
-    images: [
-      "/placeholder.svg",
-      "/placeholder.svg",
-      "/placeholder.svg",
-      "/placeholder.svg",
-    ],
+    images: [pink1, pink2, pink3, pink4],
     color: "Roze",
     colorHex: "#f8a5c2",
   },
