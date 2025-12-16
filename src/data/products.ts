@@ -1,5 +1,11 @@
 import { Product } from "@/types/product";
 
+// Import white product images
+import white1 from "@/assets/products/white-1.png";
+import white2 from "@/assets/products/white-2.png";
+import white3 from "@/assets/products/white-3.png";
+import white4 from "@/assets/products/white-4.png";
+
 // Placeholder images - replace with actual product images
 export const products: Product[] = [
   {
@@ -21,12 +27,7 @@ export const products: Product[] = [
     name: "Panda Buds Snow",
     description: "Čiste bele bežične slušalice sa prepoznatljivim panda likom. Savršen spoj stila i kvaliteta zvuka.",
     price: 2400,
-    images: [
-      "/placeholder.svg",
-      "/placeholder.svg",
-      "/placeholder.svg",
-      "/placeholder.svg",
-    ],
+    images: [white1, white2, white3, white4],
     color: "Bela",
     colorHex: "#f5f5f5",
   },
