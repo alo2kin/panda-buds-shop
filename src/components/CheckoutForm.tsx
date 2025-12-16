@@ -58,6 +58,10 @@ export const CheckoutForm = () => {
     setIsSubmitting(true);
 
     try {
+      // Get honeypot value (should be empty for real users)
+      const honeypotInput = document.getElementById('website') as HTMLInputElement;
+      const honeypotValue = honeypotInput?.value || '';
+
       const orderData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -77,6 +81,7 @@ export const CheckoutForm = () => {
         subtotal: totalPrice,
         shipping: SHIPPING_COST,
         total: totalPrice + SHIPPING_COST,
+        website: honeypotValue, // Honeypot field
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-order", {
@@ -126,6 +131,18 @@ export const CheckoutForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Honeypot field - hidden from users, bots will fill it */}
+      <div className="absolute left-[-9999px]" aria-hidden="true">
+        <label htmlFor="website">Website</label>
+        <input
+          type="text"
+          id="website"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="firstName">Ime *</Label>

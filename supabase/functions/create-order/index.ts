@@ -29,6 +29,111 @@ interface OrderRequest {
   subtotal: number;
   shipping: number;
   total: number;
+  // Honeypot field - should always be empty
+  website?: string;
+}
+
+// Simple in-memory rate limiting (per IP, resets on function restart)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 5;
+
+function isRateLimited(clientIP: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(clientIP);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+  
+  record.count++;
+  if (record.count > MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Input validation helpers
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 255;
+}
+
+function validatePhone(phone: string): boolean {
+  // Serbian phone format: allows +381, 06x, etc.
+  const phoneRegex = /^[\d\s\+\-\(\)]{6,20}$/;
+  return phoneRegex.test(phone);
+}
+
+function validateString(str: string, minLen: number, maxLen: number): boolean {
+  return typeof str === 'string' && str.trim().length >= minLen && str.length <= maxLen;
+}
+
+function validateOrderItems(items: OrderItem[]): boolean {
+  if (!Array.isArray(items) || items.length === 0 || items.length > 50) {
+    return false;
+  }
+  
+  return items.every(item => 
+    validateString(item.productId, 1, 100) &&
+    validateString(item.name, 1, 200) &&
+    validateString(item.color, 1, 50) &&
+    typeof item.quantity === 'number' && item.quantity > 0 && item.quantity <= 100 &&
+    typeof item.price === 'number' && item.price > 0 && item.price <= 1000000
+  );
+}
+
+function validateOrderData(data: OrderRequest): { valid: boolean; error?: string } {
+  // Check honeypot - if filled, it's a bot
+  if (data.website && data.website.trim() !== '') {
+    return { valid: false, error: 'Invalid request' };
+  }
+
+  if (!validateString(data.firstName, 1, 100)) {
+    return { valid: false, error: 'Invalid first name' };
+  }
+  if (!validateString(data.lastName, 1, 100)) {
+    return { valid: false, error: 'Invalid last name' };
+  }
+  if (!validatePhone(data.phone)) {
+    return { valid: false, error: 'Invalid phone number' };
+  }
+  if (!validateEmail(data.email)) {
+    return { valid: false, error: 'Invalid email address' };
+  }
+  if (!validateString(data.municipality, 1, 100)) {
+    return { valid: false, error: 'Invalid municipality' };
+  }
+  if (!validateString(data.city, 1, 100)) {
+    return { valid: false, error: 'Invalid city' };
+  }
+  if (!validateString(data.address, 1, 300)) {
+    return { valid: false, error: 'Invalid address' };
+  }
+  if (!validateString(data.courierService, 1, 50)) {
+    return { valid: false, error: 'Invalid courier service' };
+  }
+  if (!validateOrderItems(data.items)) {
+    return { valid: false, error: 'Invalid order items' };
+  }
+  if (typeof data.subtotal !== 'number' || data.subtotal <= 0 || data.subtotal > 10000000) {
+    return { valid: false, error: 'Invalid subtotal' };
+  }
+  if (typeof data.shipping !== 'number' || data.shipping < 0 || data.shipping > 100000) {
+    return { valid: false, error: 'Invalid shipping cost' };
+  }
+  if (typeof data.total !== 'number' || data.total <= 0 || data.total > 10000000) {
+    return { valid: false, error: 'Invalid total' };
+  }
+  
+  // Verify total matches subtotal + shipping
+  if (Math.abs(data.total - (data.subtotal + data.shipping)) > 1) {
+    return { valid: false, error: 'Total does not match subtotal + shipping' };
+  }
+
+  return { valid: true };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -38,26 +143,63 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('cf-connecting-ip') || 
+                     'unknown';
+    
+    // Check rate limit
+    if (isRateLimited(clientIP)) {
+      console.log(`Rate limited IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Previše zahteva. Molimo sačekajte minut.' 
+        }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const orderData: OrderRequest = await req.json();
-    console.log("Received order:", orderData);
+    
+    // Validate all input data
+    const validation = validateOrderData(orderData);
+    if (!validation.valid) {
+      console.log(`Validation failed: ${validation.error}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: validation.error 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Received valid order from:", clientIP);
 
     // Create Supabase client with service role for inserting orders
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Insert order into database
+    // Insert order into database (sanitized data)
     const { data: order, error: dbError } = await supabase
       .from("orders")
       .insert({
-        first_name: orderData.firstName,
-        last_name: orderData.lastName,
-        phone: orderData.phone,
-        email: orderData.email,
-        municipality: orderData.municipality,
-        city: orderData.city,
-        address: orderData.address,
-        courier_service: orderData.courierService,
+        first_name: orderData.firstName.trim(),
+        last_name: orderData.lastName.trim(),
+        phone: orderData.phone.trim(),
+        email: orderData.email.trim().toLowerCase(),
+        municipality: orderData.municipality.trim(),
+        city: orderData.city.trim(),
+        address: orderData.address.trim(),
+        courier_service: orderData.courierService.trim(),
         items: orderData.items,
         subtotal: orderData.subtotal,
         shipping: orderData.shipping,
@@ -79,7 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
         (item) => `
           <tr>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-              ${item.name} (${item.color})
+              ${escapeHtml(item.name)} (${escapeHtml(item.color)})
             </td>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">
               ${item.quantity}
@@ -115,7 +257,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <div style="background: linear-gradient(135deg, #f0fdf4, #ffffff); border-radius: 16px; padding: 30px; margin: 20px 0;">
-              <h2 style="color: #166534; margin-top: 0;">Hvala na porudžbini, ${orderData.firstName}!</h2>
+              <h2 style="color: #166534; margin-top: 0;">Hvala na porudžbini, ${escapeHtml(orderData.firstName)}!</h2>
               <p>Vaša porudžbina je uspešno primljena i biće isporučena u roku od 2-5 radnih dana.</p>
               <p style="background: #dcfce7; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold;">
                 Broj porudžbine: ${order.id.slice(0, 8).toUpperCase()}
@@ -151,13 +293,13 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
               <h3 style="margin-top: 0;">📍 Adresa dostave</h3>
               <p style="margin: 0;">
-                ${orderData.firstName} ${orderData.lastName}<br>
-                ${orderData.address}<br>
-                ${orderData.municipality}, ${orderData.city}<br>
-                Tel: ${orderData.phone}
+                ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}<br>
+                ${escapeHtml(orderData.address)}<br>
+                ${escapeHtml(orderData.municipality)}, ${escapeHtml(orderData.city)}<br>
+                Tel: ${escapeHtml(orderData.phone)}
               </p>
               <p style="margin-top: 12px; font-weight: bold;">
-                🚚 Kurirska služba: ${orderData.courierService}
+                🚚 Kurirska služba: ${escapeHtml(orderData.courierService)}
               </p>
             </div>
 
@@ -191,7 +333,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Panda Buds <onboarding@resend.dev>",
         to: [ownerEmail],
-        subject: `🐼 Nova porudžbina #${order.id.slice(0, 8).toUpperCase()} - ${orderData.firstName} ${orderData.lastName}`,
+        subject: `🐼 Nova porudžbina #${order.id.slice(0, 8).toUpperCase()} - ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -209,11 +351,11 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
               <h3 style="margin-top: 0;">👤 Kupac</h3>
               <p>
-                <strong>Ime:</strong> ${orderData.firstName} ${orderData.lastName}<br>
-                <strong>Email:</strong> ${orderData.email}<br>
-                <strong>Telefon:</strong> ${orderData.phone}<br>
-                <strong>Adresa:</strong> ${orderData.address}, ${orderData.municipality}, ${orderData.city}<br>
-                <strong>🚚 Kurir:</strong> ${orderData.courierService}
+                <strong>Ime:</strong> ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}<br>
+                <strong>Email:</strong> ${escapeHtml(orderData.email)}<br>
+                <strong>Telefon:</strong> ${escapeHtml(orderData.phone)}<br>
+                <strong>Adresa:</strong> ${escapeHtml(orderData.address)}, ${escapeHtml(orderData.municipality)}, ${escapeHtml(orderData.city)}<br>
+                <strong>🚚 Kurir:</strong> ${escapeHtml(orderData.courierService)}
               </p>
             </div>
 
@@ -271,7 +413,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: "Došlo je do greške. Molimo pokušajte ponovo." 
       }),
       {
         status: 500,
@@ -280,5 +422,15 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 };
+
+// HTML escape to prevent XSS in emails
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 serve(handler);
