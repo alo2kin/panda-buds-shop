@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     // Mejl za tebe (vlasniku)
     await resend.emails.send({
       from: 'noreply@tvoj-domen.com',
-      to: 'tvoj-email@gmail.com', // Tvoj email
+      to: 'smidt.ivan123@gmail.com', // Tvoj email
       subject: 'Nova porudžbina - Panda Buds Shop',
       html: `
         <h2>Nova porudžbina!</h2>
@@ -58,3 +58,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Failed to send emails' });
   }
 }
+
