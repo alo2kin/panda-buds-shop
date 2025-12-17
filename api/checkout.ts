@@ -85,24 +85,28 @@ export default async function handler(req: any, res: any) {
     });
 
     // 5. Slanje mejla VLASNIKU (Tebi)
-    const ownerEmail = process.env.OWNER_EMAIL; // Moraš dodati ovo u env varijable
+   const ownerEmail = process.env.OWNER_EMAIL; 
+    
+    console.log("Pokusavam da posaljem gazdi na:", ownerEmail); // <--- DODATO
+
     if (ownerEmail) {
-      await resend.emails.send({
-        from: 'Panda Buds <onboarding@resend.dev>',
-        to: ownerEmail,
-        subject: `Nova porudžbina #${order.id} - ${orderData.total} RSD`,
-        html: `
-          <h2>Nova porudžbina! 💰</h2>
-          <p><strong>Kupac:</strong> ${orderData.firstName} ${orderData.lastName}</p>
-          <p><strong>Telefon:</strong> ${orderData.phone}</p>
-          <p><strong>Adresa:</strong> ${orderData.address}, ${orderData.city}</p>
-          <h3>Stavke:</h3>
-          <ul>
-            ${orderData.items.map((i: any) => `<li>${i.name} x${i.quantity}</li>`).join('')}
-          </ul>
-          <h3>Ukupno: ${orderData.total} RSD</h3>
-        `
-      });
+      try {
+        const data = await resend.emails.send({
+          from: 'Panda Buds <onboarding@resend.dev>',
+          to: ownerEmail,
+          subject: `Nova porudžbina #${order.id} - ${orderData.total} RSD`,
+          html: `
+            <h2>Nova porudžbina! 💰</h2>
+            <p><strong>Kupac:</strong> ${orderData.firstName} ${orderData.lastName}</p>
+            <p>Ukupno: ${orderData.total} RSD</p>
+          `
+        });
+        console.log("Mejl vlasniku POSLAT. ID:", data); // <--- DODATO
+      } catch (ownerError) {
+        console.error("GRESKA pri slanju vlasniku:", ownerError); // <--- DODATO
+      }
+    } else {
+      console.log("NEMA OWNER_EMAIL varijable u Vercelu!"); // <--- DODATO
     }
 
     return res.status(200).json({ success: true, orderId: order.id });
