@@ -84,18 +84,20 @@ export const CheckoutForm = () => {
         website: honeypotValue, // Honeypot field
       };
 
-      const { data: result, error } = await supabase.functions.invoke("create-order", {
-        body: orderData,
-      });
+     const response = await fetch('/api/checkout', {
+      method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(orderData),
+});
 
-      if (error) {
-        console.error("Order error:", error);
-        throw new Error(error.message || "Greška pri slanju porudžbine");
-      }
+const result = await response.json();
 
-      if (!result.success) {
-        throw new Error(result.error || "Greška pri slanju porudžbine");
-      }
+if (!response.ok) {
+  console.error("Order error:", result);
+  throw new Error(result.error || "Greška pri slanju porudžbine");
+}
 
       console.log("Order created successfully:", result);
       
