@@ -169,6 +169,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (dbError) throw new Error(`Failed to save order: ${dbError.message}`);
 
+    console.log("Order saved to database:", order.id);
+
     // Generate Items HTML
     const itemsHtml = orderData.items.map((item) => `
       <tr>
@@ -179,7 +181,7 @@ const handler = async (req: Request): Promise<Response> => {
     `).join("");
 
     // 1. Send Email to CUSTOMER
-    await fetch("https://api.resend.com/emails", {
+    const customerEmailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
@@ -187,79 +189,210 @@ const handler = async (req: Request): Promise<Response> => {
         to: [orderData.email],
         subject: "🐼 Hvala na porudžbini - Panda Buds",
         html: `
-          <!DOCTYPE html><html><body style="font-family: Arial, sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center;"><h1>🐼 Panda Buds</h1></div>
-            <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; margin: 20px 0;">
-              <h2>Hvala, ${escapeHtml(orderData.firstName)}!</h2>
-              <p>Porudžbina <strong>#${order.id.slice(0, 8).toUpperCase()}</strong> je primljena.</p>
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"></head>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; padding: 20px 0;">
+              <h1 style="color: #1a1a1a; margin: 0;">🐼 Panda Buds</h1>
             </div>
-            <h3>📦 Vaša korpa</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead><tr style="background: #e5e7eb;"><th align="left">Proizvod</th><th>Kom.</th><th align="right">Cena</th></tr></thead>
-              <tbody>${itemsHtml}</tbody>
-              <tfoot>
-                <tr><td colspan="2" align="right">Dostava:</td><td align="right">${orderData.shipping} RSD</td></tr>
-                <tr style="font-weight: bold;"><td colspan="2" align="right">UKUPNO:</td><td align="right" style="color: #166534;">${orderData.total} RSD</td></tr>
-              </tfoot>
-            </table>
-            <p style="text-align: center; margin-top: 30px; font-size: 14px; color: #666;">Panda Buds © ${new Date().getFullYear()}</p>
-          </body></html>
+            
+            <div style="background: linear-gradient(135deg, #f0fdf4, #ffffff); border-radius: 16px; padding: 30px; margin: 20px 0;">
+              <h2 style="color: #166534; margin-top: 0;">Hvala na porudžbini, ${escapeHtml(orderData.firstName)}!</h2>
+              <p>Vaša porudžbina je uspešno primljena i biće isporučena u roku od 2-5 radnih dana.</p>
+              <p style="background: #dcfce7; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold;">
+                Broj porudžbine: ${order.id.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
+
+            <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">📦 Vaša porudžbina</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #e5e7eb;">
+                    <th style="padding: 12px; text-align: left;">Proizvod</th>
+                    <th style="padding: 12px; text-align: center;">Kom.</th>
+                    <th style="padding: 12px; text-align: right;">Cena</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="2" style="padding: 12px; text-align: right;">Poštarina:</td>
+                    <td style="padding: 12px; text-align: right;">${orderData.shipping} RSD</td>
+                  </tr>
+                  <tr style="font-weight: bold; font-size: 18px;">
+                    <td colspan="2" style="padding: 12px; text-align: right;">Ukupno:</td>
+                    <td style="padding: 12px; text-align: right; color: #166534;">${orderData.total} RSD</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div style="background: #f9fafb; border-radius: 16px; padding: 20px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">📍 Adresa dostave</h3>
+              <p style="margin: 0;">
+                ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}<br>
+                ${escapeHtml(orderData.address)}<br>
+                ${escapeHtml(orderData.municipality)}, ${escapeHtml(orderData.city)}<br>
+                Tel: ${escapeHtml(orderData.phone)}
+              </p>
+              <p style="margin-top: 12px; font-weight: bold;">
+                🚚 Kurirska služba: ${escapeHtml(orderData.courierService)}
+              </p>
+            </div>
+
+            <div style="background: #fef3c7; border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center;">
+              <p style="margin: 0; font-weight: bold;">💵 Plaćanje pouzećem</p>
+              <p style="margin: 8px 0 0;">Iznos za plaćanje: ${orderData.total} RSD</p>
+            </div>
+
+            <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
+              <p>Imate pitanja? Kontaktirajte nas na info@pandabuds.rs</p>
+              <p>© ${new Date().getFullYear()} Panda Buds. Sva prava zadržana.</p>
+            </div>
+          </body>
+          </html>
         `,
       }),
     });
 
-    // 2. Send Email to OWNER (YOU)
+    const customerEmailData = await customerEmailResponse.json();
+    console.log("Customer email sent:", customerEmailData);
+
+    // 2. Send Email to OWNER (YOU) with ALL details
     if (OWNER_EMAIL) {
-      const ownerRes = await fetch("https://api.resend.com/emails", {
+      const ownerEmailResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
         body: JSON.stringify({
           from: "Panda Buds <porudzbine@pandabuds.rs>",
           to: [OWNER_EMAIL],
-          subject: `💰 NOVA PORUDŽBINA: ${orderData.total} RSD (#${order.id.slice(0, 8)})`,
+          subject: `💰 NOVA PORUDŽBINA: ${orderData.total} RSD (#${order.id.slice(0, 8).toUpperCase()})`,
           html: `
-            <!DOCTYPE html><html><body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h1 style="color: #166534;">Nova porudžbina! 💰</h1>
-              <div style="background: #f3f4f6; padding: 15px; border-radius: 8px;">
-                <p><strong>Kupac:</strong> ${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}</p>
-                <p><strong>Email:</strong> ${escapeHtml(orderData.email)}</p>
-                <p><strong>Telefon:</strong> <a href="tel:${escapeHtml(orderData.phone)}">${escapeHtml(orderData.phone)}</a></p>
-                <p><strong>Adresa:</strong> ${escapeHtml(orderData.address)}, ${escapeHtml(orderData.city)}</p>
-                <p><strong>Kurir:</strong> ${escapeHtml(orderData.courierService)}</p>
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"></head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #166534;">🐼 Nova porudžbina! 💰</h1>
+              
+              <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <h2 style="margin-top: 0;">Porudžbina #${order.id.slice(0, 8).toUpperCase()}</h2>
+                <p style="font-size: 18px; font-weight: bold; color: #166534;">UKUPNO: ${orderData.total} RSD</p>
+                <p style="font-size: 14px; color: #666;">Datum: ${new Date().toLocaleString('sr-RS')}</p>
               </div>
-              <h3>Artikli:</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tbody>${itemsHtml}</tbody>
-                <tfoot>
-                  <tr style="background: #dcfce7; font-weight: bold; font-size: 1.2em;">
-                    <td colspan="2" style="padding: 10px;">ZARADA (Total):</td>
-                    <td style="padding: 10px; text-align: right;">${orderData.total} RSD</td>
+
+              <div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <h3 style="color: #166534; margin-top: 0;">👤 Informacije o kupcu</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; width: 40%;">Ime i prezime:</td>
+                    <td style="padding: 8px 0;">${escapeHtml(orderData.firstName)} ${escapeHtml(orderData.lastName)}</td>
                   </tr>
-                </tfoot>
-              </table>
-            </body></html>
+                  <tr style="background: #f9fafb;">
+                    <td style="padding: 8px; font-weight: bold;">Email:</td>
+                    <td style="padding: 8px;"><a href="mailto:${escapeHtml(orderData.email)}">${escapeHtml(orderData.email)}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Telefon:</td>
+                    <td style="padding: 8px 0;"><a href="tel:${escapeHtml(orderData.phone)}" style="color: #166534; font-weight: bold; font-size: 16px;">${escapeHtml(orderData.phone)}</a></td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <h3 style="color: #166534; margin-top: 0;">📍 Adresa dostave</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; width: 40%;">Ulica i broj:</td>
+                    <td style="padding: 8px 0;">${escapeHtml(orderData.address)}</td>
+                  </tr>
+                  <tr style="background: #f9fafb;">
+                    <td style="padding: 8px; font-weight: bold;">Grad:</td>
+                    <td style="padding: 8px;">${escapeHtml(orderData.city)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Opština:</td>
+                    <td style="padding: 8px 0;">${escapeHtml(orderData.municipality)}</td>
+                  </tr>
+                  <tr style="background: #f9fafb;">
+                    <td style="padding: 8px; font-weight: bold;">🚚 Kurirska služba:</td>
+                    <td style="padding: 8px; font-size: 16px; font-weight: bold; color: #166534;">${escapeHtml(orderData.courierService)}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <h3 style="color: #166534; margin-top: 0;">📦 Naručeni proizvodi</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #166534; color: white;">
+                      <th style="padding: 12px; text-align: left;">Proizvod</th>
+                      <th style="padding: 12px; text-align: center;">Količina</th>
+                      <th style="padding: 12px; text-align: right;">Cena</th>
+                    </tr>
+                  </thead>
+                  <tbody>${itemsHtml}</tbody>
+                  <tfoot>
+                    <tr style="background: #f9fafb;">
+                      <td colspan="2" style="padding: 12px; text-align: right; font-weight: bold;">Poštarina:</td>
+                      <td style="padding: 12px; text-align: right;">${orderData.shipping} RSD</td>
+                    </tr>
+                    <tr style="background: #dcfce7; font-weight: bold; font-size: 18px;">
+                      <td colspan="2" style="padding: 15px; text-align: right;">💰 UKUPNO ZA NAPLATU:</td>
+                      <td style="padding: 15px; text-align: right; color: #166534; font-size: 20px;">${orderData.total} RSD</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div style="background: #fef3c7; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                <p style="margin: 0; font-weight: bold; font-size: 16px;">💵 Plaćanje pouzećem - Gotovina pri preuzimanju</p>
+              </div>
+
+              <p style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px;">
+                Automatska notifikacija - Panda Buds sistem
+              </p>
+            </body>
+            </html>
           `,
         }),
       });
+
+      const ownerEmailData = await ownerEmailResponse.json();
       
-      if (!ownerRes.ok) {
-        console.error("Greska pri slanju mejla vlasniku:", await ownerRes.text());
+      if (!ownerEmailResponse.ok) {
+        console.error("Failed to send owner notification email:", ownerEmailData);
       } else {
-        console.log("Mejl poslat vlasniku na:", OWNER_EMAIL);
+        console.log("Owner notification email sent successfully to:", OWNER_EMAIL);
       }
-    } else {
-      console.log("Nisi podesio OWNER_EMAIL u 4. liniji koda!");
     }
 
-    return new Response(JSON.stringify({ success: true, orderId: order.id }), {
-      status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        orderId: order.id,
+        message: "Order created and emails sent successfully",
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
   } catch (error: any) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ success: false, error: "Greška na serveru." }), {
-      status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    console.error("Error in create-order function:", error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: "Došlo je do greške. Molimo pokušajte ponovo." 
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
   }
 };
 
