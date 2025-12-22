@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
     // Mejl za kupca
     await resend.emails.send({
-      from: 'noreply@panda-buds.com',
+      from: 'Panda Buds <porudzbine@pandabuds.rs>',
       to: customerEmail,
       subject: 'Potvrda porudžbine - Panda Buds Shop',
       html: `
@@ -58,6 +58,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Failed to send emails' });
   }
 }
+
 
 
 
