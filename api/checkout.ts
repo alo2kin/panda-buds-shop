@@ -66,7 +66,7 @@ export default async function handler(req: any, res: any) {
 
     // 4. Slanje mejla KUPCU
     await resend.emails.send({
-      from: 'Panda Buds <onboarding@resend.dev>', // ⚠️ Promeni ovo kad verifikuješ domen
+      from: 'Panda Buds <porudzbine@pandabuds.rs>', // ⚠️ Promeni ovo kad verifikuješ domen
       to: orderData.email,
       subject: 'Vaša porudžbina je primljena! 🐼',
       html: `
@@ -92,7 +92,7 @@ export default async function handler(req: any, res: any) {
     if (ownerEmail) {
       try {
         const data = await resend.emails.send({
-          from: 'Panda Buds <onboarding@resend.dev>',
+          from: 'Panda Buds <porudzbine@pandabuds.rs>',
           to: ownerEmail,
           subject: `Nova porudžbina #${order.id} - ${orderData.total} RSD`,
           html: `
