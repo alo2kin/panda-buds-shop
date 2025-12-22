@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // --------------------------------------------------------
 // 👇👇👇 OVDE UPIŠI SVOJ EMAIL NA KOJI STIŽU PORUDŽBINE 👇👇👇
-const OWNER_EMAIL = "smidt.ivan123@gmail.com"; 
+const OWNER_EMAIL = "pandabuds@pokloni.com"; 
 // --------------------------------------------------------
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -183,7 +183,7 @@ const handler = async (req: Request): Promise<Response> => {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
-        from: "Panda Buds <onboarding@resend.dev>",
+        from: "Panda Buds <porudzbine@pandabuds.rs>",
         to: [orderData.email],
         subject: "🐼 Hvala na porudžbini - Panda Buds",
         html: `
@@ -209,12 +209,12 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // 2. Send Email to OWNER (YOU)
-    if (OWNER_EMAIL && !OWNER_EMAIL.includes("tvoj_pravi_email")) {
+    if (OWNER_EMAIL) {
       const ownerRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
         body: JSON.stringify({
-          from: "Panda Buds <onboarding@resend.dev>",
+          from: "Panda Buds <porudzbine@pandabuds.rs>",
           to: [OWNER_EMAIL],
           subject: `💰 NOVA PORUDŽBINA: ${orderData.total} RSD (#${order.id.slice(0, 8)})`,
           html: `
