@@ -99,7 +99,7 @@ export default async function handler(req: any, res: any) {
             <h2 style="color: #166534; margin-top: 0;">Hvala na porudžbini, ${escapeHtml(orderData.firstName)}!</h2>
             <p>Vaša porudžbina je uspešno primljena i biće isporučena u roku od 2-5 radnih dana.</p>
             <p style="background: #dcfce7; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold;">
-              Broj porudžbine: #${order.id.slice(0, 8).toUpperCase()}
+              Broj porudžbine: #${String(order.id).slice(0, 8).toUpperCase()}
             </p>
           </div>
 
@@ -166,7 +166,7 @@ export default async function handler(req: any, res: any) {
         const data = await resend.emails.send({
           from: 'Panda Buds <porudzbine@pandabuds.rs>',
           to: ownerEmail,
-          subject: `💰 NOVA PORUDŽBINA: ${orderData.total} RSD (#${order.id.slice(0, 8).toUpperCase()})`,
+          subject: `💰 NOVA PORUDŽBINA: ${orderData.total} RSD (#${String(order.id).slice(0, 8).toUpperCase()})`,
           html: `
             <!DOCTYPE html>
             <html>
@@ -175,7 +175,7 @@ export default async function handler(req: any, res: any) {
               <h1 style="color: #166534;">🐼 Nova porudžbina! 💰</h1>
               
               <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                <h2 style="margin-top: 0;">Porudžbina #${order.id.slice(0, 8).toUpperCase()}</h2>
+                <h2 style="margin-top: 0;">Porudžbina #${String(order.id).slice(0, 8).toUpperCase()}</h2>
                 <p style="font-size: 18px; font-weight: bold; color: #166534;">UKUPNO: ${orderData.total} RSD</p>
                 <p style="font-size: 14px; color: #666;">Datum: ${new Date().toLocaleString('sr-RS')}</p>
               </div>
